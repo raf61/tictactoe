@@ -1,25 +1,35 @@
 const crypto = require('crypto')
 const _ = require('lodash')
 
-module.exports = function createGame(){
+module.exports = function createGame(){ // Factory
+    
     const state = {
         players:[],
         matches:{}
     }
 
-    function addPlayer(id, user){
+    /**
+     * Add a player to a match
+     * @param {String} id The player id
+     * @returns a player object
+     */
+    function addPlayer(id){
         let index = state.players.indexOf(id)
         let playerObj = {
             id,
             free:true,
             currentMatch:null,
-            user
         }
         index == -1 && state.players.push(playerObj)
         return playerObj
         
     }
 
+    /**
+     * Removes a player from all matches and deletes it
+     * @param {String} id The player id
+     * @returns The player object
+     */
     function removePlayer(id){
         let index = state.players.findIndex(x=>x.id == id)
         if (index == -1)
@@ -40,19 +50,27 @@ module.exports = function createGame(){
         
     }
 
+    /**
+     * Creates a match
+     * @param {String} firstPlayerId The id of the player to first get into the match
+     * @returns The match id
+     */
     function createMatch(firstPlayerId){
-
         let matchId = crypto.randomBytes(16).toString('hex')
         state.matches[matchId] = {
             started:false,
             players:[],
             state:[[null, null, null],[null, null, null],[null, null, null]],
-            roundPlayer:0
+            roundPlayer:0,
+            id: matchId
         }
         return joinMatch({playerId:firstPlayerId, matchId})
     }
     
-
+    /**
+     * Deletes a match
+     * @param {String} matchId The match id
+     */
     function removeMatch(matchId){
         let match = state.matches[matchId]
         if (!match)
@@ -67,8 +85,13 @@ module.exports = function createGame(){
         Reflect.deleteProperty(state.matches, matchId)
     }
 
+    /**
+     * Put a player into a match
+     * @param {String} playerId The player id 
+     * @param {String} matchId The match id
+     * @returns The match id
+     */
     function joinMatch({playerId, matchId}){
-
         let match = state.matches[matchId]
         let player = state.players.find(x=>x.id == playerId)
         if ((!match || !player || match.players.length >= 2)){
@@ -77,12 +100,15 @@ module.exports = function createGame(){
         match.players.push(playerId)
         player.free = false
         player.currentMatch = matchId
-        match.id = matchId
         
         return matchId
 
     }
 
+    /**
+     * Starts a match and draw the first to play
+     * @param {String} matchId The match id
+     */
     function startMatch(matchId){
         let match = state.matches[matchId]
         if (match){
@@ -91,6 +117,11 @@ module.exports = function createGame(){
         }
     }
 
+    /**
+     * Finds a match to a player
+     * @param {String} playerId 
+     * @returns The match id
+     */
     function matchPlayer(playerId){
         let match = null
         let matchId;
@@ -109,6 +140,13 @@ module.exports = function createGame(){
         return createMatch(playerId)
     }
 
+    /**
+     * 
+     * @param {String} playerId The id of the player who made the move
+     * @param {String} matchId The id of the match in which the move was made
+     * @param {Object} command A object containing the row and the column of the made move; Ex.: {row:0, col:0}
+     * @returns {Object} A object containing the information of whether the match is over or not and if it ended in a draw or a win(if so, it will have a 0 if the first player in the playerlist wins and 1 if the second does)
+     */
     function makeMove({playerId, matchId, command}){
         let match = state.matches[matchId]
         if (!match || !match.players.includes(playerId) || match.players[match.roundPlayer] != playerId){
@@ -126,10 +164,18 @@ module.exports = function createGame(){
             return
         }
         match.state[row][col] = match.roundPlayer
-        match.roundPlayer = Number(!match.roundPlayer)      
+        match.roundPlayer = Number(!match.roundPlayer)    
+
+        return verifyFinishMatch(matchId)
     }
 
-    function getSquareSequences(arr){
+    /**
+     * Returns all the directions the square can have (columns, diagonals and rows)
+     * @param {Array} matchState The current match state
+     * @returns {Object} An array of arrays: ([[3 rows],[3 columns], [2 diagonals])
+     */
+    function getSquareSequences(matchState){
+        
         let result = []
 
         function column(m, i){
@@ -137,42 +183,51 @@ module.exports = function createGame(){
             m.map(x=>res.push(x[i]))
             return res
         }
-        function row(arr, i){
-            return arr[i]
+        function row(matchState, i){
+            return matchState[i]
         }
-        function diagLeft(arr){
+        function diagLeft(matchState){
             let c = 0
             let res = []
-            for (let r of arr){
+            for (let r of matchState){
                 res.push(r[c])
                 c++
             }
             return res
         }
-        function diagRight(arr){
-            let c = arr.length - 1
+        function diagRight(matchState){
+            let c = matchState.length - 1
             let res = []
-            for (let r of arr){
+            for (let r of matchState){
                 res.push(r[c])
                 c--
             }
             return res
         }
 
-        for (let c in arr){
-            result.push(row(arr, c))
-            result.push(column(arr, c))
+        for (let c in matchState){
+            result.push(row(matchState, c))
+            result.push(column(matchState, c))
         }
-        result.push(diagLeft(arr))
-        result.push(diagRight(arr))
-               
+        result.push(diagLeft(matchState))
+        result.push(diagRight(matchState))
+            
         
         
         return result
 
     }
 
+    /**
+     * Checks if a match is over or not
+     * @param {String} matchId 
+     * @returns {Object} A object containing the information whether the match is over or not and it`s winner (if there`s one)
+        Ex.: {finished:true, winner:null} -> The match ended in a draw
+        Ex.: {finished:false} -> The match is not over yet
+        Ex.: {finished:true, winner:0} -> The first player in the match playerlist won the match.
+     */
     function verifyFinishMatch(matchId){
+
         let match = state.matches[matchId]
         if (!match){
             return
@@ -209,7 +264,6 @@ module.exports = function createGame(){
         startMatch,
         removeMatch,
         matchPlayer,
-        makeMove,
-        verifyFinishMatch
+        makeMove
     }
 }
