@@ -24,6 +24,7 @@
                 <div class="disconected-2-wraper">
                     <div class="child">
                     <h2>Reconnecting...</h2>
+                    <p>Try reloading the page</p>
                     </div>
                 </div>
             </div>
@@ -54,7 +55,7 @@
 
             <div class="ended-game" v-if="wonGame.state && wonGame.wo">
                 <div class="ended-game-message" style="box-shadow:1px 1px 8px green;">
-                    <p class="msg-title">Won by W.O!</p>
+                    <p class="msg-title">Win by W.O!</p>
                     <span class="ended-game-icon">
                         <i class="bi bi-hand-thumbs-up"></i>
                     </span>
@@ -103,8 +104,6 @@
 import { getCurrentInstance, onUnmounted, reactive, ref} from 'vue'
 import createGame from '../utils/game/game.js'
 import Loader from '../components/generic/Loader.vue'
-import {useState} from '../utils/vuex.js'
-import {useRouter} from 'vue-router'
 
     export default {
         name:'Game',
@@ -112,16 +111,8 @@ import {useRouter} from 'vue-router'
         setup(){
             
             const app = getCurrentInstance()
-            const {user} = useState(['user'])
-            const router = useRouter()
-
             
-            if (!user.value.is_authenticated){
-                router.push('/login')
-                return {}
-            }
             const $socket = app.appContext.config.globalProperties.$socket
-            const $message = (...args)=>app.appContext.config.globalProperties.$message(...args)
             const searchingMatch = ref(false)
             const game = reactive(createGame())
             const wonGame = ref({state:false, wo:null})
@@ -130,11 +121,8 @@ import {useRouter} from 'vue-router'
             const disconnected = ref(false)
 
             searchForMatch()
-            
-            
 
             $socket.socket.on('disconnect', ()=>{
-                
                 resetAll()
                 disconnected.value = true
 
@@ -143,11 +131,6 @@ import {useRouter} from 'vue-router'
                     searchForMatch()
                 })
             })
-
-            $socket.socket.on('new-device-connected', ()=>{
-                $message('Outro dispositivo se conectou usando essa conta... Se foi você, apenas ignore', 'red', null, 6000)
-            })
-
 
 
             $socket.socket.on('start-match', (command)=>{
@@ -173,7 +156,7 @@ import {useRouter} from 'vue-router'
                 if (winner==null){//draw
                     drawedGame.value.state = true
                 }
-                else if (winner==$socket.socket.id){//won
+                else if (winner==$socket.socket.id){//win
                     wonGame.value.state = true
                 }
                 else{
@@ -205,21 +188,13 @@ import {useRouter} from 'vue-router'
                 wonGame.value.wo = null
                 lostGame.value.state = false
                 drawedGame.value.state = false
-                
-
             }
 
             function searchForMatch(){
                 resetAll()
                 searchingMatch.value = true
                 $socket.socket.emit('match', {})
-                console.log('matching...')
             }
-
-
-
-            
-
 
 
             onUnmounted(()=>{
@@ -240,7 +215,6 @@ import {useRouter} from 'vue-router'
                 searchForMatch,
                 disconnected,
                 render:true,
-                
             }
         }
 
@@ -446,6 +420,9 @@ button.search-match:disabled{
     text-align:center;
     height:20rem;
     width:20rem;
+}
+.disconected-2-wraper p{
+    color:#9e8181;
 }
 .disconected-2-wraper::before {                
     content: '';

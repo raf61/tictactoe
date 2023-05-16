@@ -1,5 +1,6 @@
 import {reactive} from 'vue'
 import _ from 'lodash'
+
 export default function createGame(){
 
     let originalState = {

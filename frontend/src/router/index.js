@@ -1,15 +1,10 @@
 import Game from '../views/Game.vue'
-import Login from '../views/Login.vue'
 import notFound404 from '../views/404.vue'
 
 const routes = [
     {
         path:'/game',
         component:Game
-    },
-    {
-        path:'/login',
-        component:Login
     },
     {
         path:'/404',
@@ -20,7 +15,7 @@ const routes = [
 import {createRouter, createWebHistory} from 'vue-router'
 
 const router = createRouter({
-    history:createWebHistory(process.env.BASE_URL),
+    history:createWebHistory(import.meta.env.BASE_URL),
     routes
 })
 
